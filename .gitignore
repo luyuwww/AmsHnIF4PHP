@@ -1,0 +1,10 @@
+# Package Files #
+/target
+/.settings
+/.classpath
+/.project
+.idea
+*.iml
+.idea/workspace.xml
+.war
+.jar
