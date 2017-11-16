@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="cn.lams.dao.i.SQzhMapper">
-  <resultMap id="BaseResultMap" type="cn.lams.pojo.SQzh">
+<mapper namespace="com.ams.dao.i.SQzhMapper">
+  <resultMap id="BaseResultMap" type="com.ams.pojo.SQzh">
     <id column="DID" jdbcType="INTEGER" property="did" />
     <result column="QZH" jdbcType="VARCHAR" property="qzh" />
     <result column="QZMC" jdbcType="VARCHAR" property="qzmc" />
@@ -16,7 +16,7 @@
     delete from S_Qzh
     where DID = #{did,jdbcType=INTEGER}
   </delete>
-  <insert id="insert" parameterType="cn.lams.pojo.SQzh">
+  <insert id="insert" parameterType="com.ams.pojo.SQzh">
     insert into S_Qzh(DID, QZH, QZMC, 
       ISDEF, BZ, PRIMARYKEY
       )
@@ -24,7 +24,7 @@
       #{isdef,jdbcType=INTEGER}, #{bz,jdbcType=VARCHAR}, #{primarykey,jdbcType=VARCHAR}
       )
   </insert>
-  <insert id="insertSelective" parameterType="cn.lams.pojo.SQzh">
+  <insert id="insertSelective" parameterType="com.ams.pojo.SQzh">
     insert into S_Qzh
     <trim prefix="(" suffix=")" suffixOverrides=",">
       <if test="did != null">
@@ -67,7 +67,7 @@
       </if>
     </trim>
   </insert>
-  <update id="updateByPrimaryKeySelective" parameterType="cn.lams.pojo.SQzh">
+  <update id="updateByPrimaryKeySelective" parameterType="com.ams.pojo.SQzh">
     update S_Qzh
     <set>
       <if test="qzh != null">
@@ -88,7 +88,7 @@
     </set>
     where DID = #{did,jdbcType=INTEGER}
   </update>
-  <update id="updateByPrimaryKey" parameterType="cn.lams.pojo.SQzh">
+  <update id="updateByPrimaryKey" parameterType="com.ams.pojo.SQzh">
     update S_Qzh
     set QZH = #{qzh,jdbcType=VARCHAR},
       QZMC = #{qzmc,jdbcType=VARCHAR},

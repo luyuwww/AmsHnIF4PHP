@@ -14,7 +14,7 @@
 	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
 	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd">
 
-	<context:component-scan base-package="cn.lams" />
+	<context:component-scan base-package="com.ams" />
 	<bean id="propertyPlaceholderConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">  
 	    <property name="locations">  
 	        <list>  
@@ -50,8 +50,8 @@
 		<property name="mapperLocations" value="classpath:mybatis/*.xml"></property>
 	</bean>
 	<bean id="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="cn.lams.dao.i" />
-		<property name="markerInterface" value="cn.lams.dao.BaseDao"/>  
+		<property name="basePackage" value="com.ams.dao.i" />
+		<property name="markerInterface" value="com.ams.dao.BaseDao"/>
 		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
 	</bean>
 	
