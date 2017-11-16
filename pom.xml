@@ -28,20 +28,14 @@
                 <version>6.1.26</version>
                 <configuration>
                     <webDefaultXml>src/test/resources/webdefault.xml</webDefaultXml>
-                    <jettyEnvXml>src/test/resources/jetty.xml</jettyEnvXml>
                     <webAppSourceDirectory>src/main/webapp</webAppSourceDirectory>
                     <scanIntervalSeconds>0</scanIntervalSeconds>
+                    <contextPath>/${project.final.name}</contextPath>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-    <repositories>
-        <repository>
-            <id>thirdparty</id>
-            <name>lams full Repository</name>
-            <url>http://thams.cn:8081/nexus/content/repositories/public</url>
-        </repository>
-    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>ojdbc6</groupId>
