@@ -4,8 +4,8 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class SUser implements Serializable {
-	private static final long serialVersionUID = 1627863812166469679L;
-	private Integer did;
+    private static final long serialVersionUID = 1627863812166469679L;
+    private Integer did;
 
     private Integer pid;
 

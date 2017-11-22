@@ -1,267 +1,271 @@
 package com.ams.pojo;
 // default package
 
+import org.apache.commons.lang.StringUtils;
+
 import java.io.File;
 import java.util.Date;
 
-import org.apache.commons.lang.StringUtils;
-
 public class EFile implements java.io.Serializable {
-	private static final long serialVersionUID = -4633677822610132400L;
-	private Integer did;
-	private Integer pid;
-	private String efilename;
-	private String title;
-	private String ext = "";
-	private String pzm;
-	private String pathname;
-	private String efiledb;
-	private Integer efileid;
-	private String xlh;
-	private String bbh;
-	private String swt;
-	private Integer status;
-	private Integer attr;
-	private Integer attrex;
-	private String creator;
-	private Date createtime;
-	private String editor;
-	private Date edittime;
-	private String deltor;
-	private Date deltime;
-	private String bz;
-	private Integer pxno;
-	private String tablename;
-	private String md5;
-	private Integer filesize = 0;
+    private static final long serialVersionUID = -4633677822610132400L;
+    private Integer did;
+    private Integer pid;
+    private String efilename;
+    private String title;
+    private String ext = "";
+    private String pzm;
+    private String pathname;
+    private String efiledb;
+    private Integer efileid;
+    private String xlh;
+    private String bbh;
+    private String swt;
+    private Integer status;
+    private Integer attr;
+    private Integer attrex;
+    private String creator;
+    private Date createtime;
+    private String editor;
+    private Date edittime;
+    private String deltor;
+    private Date deltime;
+    private String bz;
+    private Integer pxno;
+    private String tablename;
+    private String md5;
+    private Integer filesize = 0;
 
-	// Constructors
+    // Constructors
 
-	/** default constructor */
-	public EFile() {
-	}
+    /**
+     * default constructor
+     */
+    public EFile() {
+    }
 
-	/** minimal constructor */
-	public EFile(Integer did, Integer status, Integer attr, Integer attrex) {
-		this.did = did;
-		this.status = status;
-		this.attr = attr;
-		this.attrex = attrex;
-	}
+    /**
+     * minimal constructor
+     */
+    public EFile(Integer did, Integer status, Integer attr, Integer attrex) {
+        this.did = did;
+        this.status = status;
+        this.attr = attr;
+        this.attrex = attrex;
+    }
 
 
-	// Property accessors
+    // Property accessors
 
-	public Integer getFilesize() {
-		return filesize;
-	}
+    public Integer getFilesize() {
+        return filesize;
+    }
 
-	public void setFilesize(Integer filesize) {
-		this.filesize = filesize;
-	}
-	
-	public Integer getDid() {
-		return this.did;
-	}
+    public void setFilesize(Integer filesize) {
+        this.filesize = filesize;
+    }
 
-	public void setDid(Integer did) {
-		this.did = did;
-	}
+    public Integer getDid() {
+        return this.did;
+    }
 
-	public Integer getPid() {
-		return this.pid;
-	}
+    public void setDid(Integer did) {
+        this.did = did;
+    }
 
-	public void setPid(Integer pid) {
-		this.pid = pid;
-	}
+    public Integer getPid() {
+        return this.pid;
+    }
 
-	public String getEfilename() {
-		return this.efilename;
-	}
+    public void setPid(Integer pid) {
+        this.pid = pid;
+    }
 
-	public void setEfilename(String efilename) {
-		this.efilename = efilename;
-	}
+    public String getEfilename() {
+        return this.efilename;
+    }
 
-	public String getTitle() {
-		return this.title;
-	}
+    public void setEfilename(String efilename) {
+        this.efilename = efilename;
+    }
 
-	public void setTitle(String title) {
-		this.title = title;
-	}
+    public String getTitle() {
+        return this.title;
+    }
 
-	public String getExt() {
-		return this.ext;
-	}
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-	public void setExt(String ext) {
-		this.ext = ext;
-	}
+    public String getExt() {
+        return this.ext;
+    }
 
-	public String getPzm() {
-		return this.pzm;
-	}
+    public void setExt(String ext) {
+        this.ext = ext;
+    }
 
-	public void setPzm(String pzm) {
-		this.pzm = pzm;
-	}
+    public String getPzm() {
+        return this.pzm;
+    }
 
-	public String getPathname() {
-		if(StringUtils.isNotEmpty(pathname)&&(!this.pathname.startsWith(File.separator) && !this.pathname.endsWith(File.separator))){
-			return File.separator + this.pathname + File.separator;
-		}
-		return this.pathname;
-	}
+    public void setPzm(String pzm) {
+        this.pzm = pzm;
+    }
 
-	public void setPathname(String pathname) {
-		this.pathname = pathname;
-	}
+    public String getPathname() {
+        if (StringUtils.isNotEmpty(pathname) && (!this.pathname.startsWith(File.separator) && !this.pathname.endsWith(File.separator))) {
+            return File.separator + this.pathname + File.separator;
+        }
+        return this.pathname;
+    }
 
-	public String getEfiledb() {
-		return this.efiledb;
-	}
+    public void setPathname(String pathname) {
+        this.pathname = pathname;
+    }
 
-	public void setEfiledb(String efiledb) {
-		this.efiledb = efiledb;
-	}
+    public String getEfiledb() {
+        return this.efiledb;
+    }
 
-	public Integer getEfileid() {
-		return this.efileid;
-	}
+    public void setEfiledb(String efiledb) {
+        this.efiledb = efiledb;
+    }
 
-	public void setEfileid(Integer efileid) {
-		this.efileid = efileid;
-	}
+    public Integer getEfileid() {
+        return this.efileid;
+    }
 
-	public String getXlh() {
-		return this.xlh;
-	}
+    public void setEfileid(Integer efileid) {
+        this.efileid = efileid;
+    }
 
-	public void setXlh(String xlh) {
-		this.xlh = xlh;
-	}
+    public String getXlh() {
+        return this.xlh;
+    }
 
-	public String getBbh() {
-		return this.bbh;
-	}
+    public void setXlh(String xlh) {
+        this.xlh = xlh;
+    }
 
-	public void setBbh(String bbh) {
-		this.bbh = bbh;
-	}
+    public String getBbh() {
+        return this.bbh;
+    }
 
-	public String getSwt() {
-		return this.swt;
-	}
+    public void setBbh(String bbh) {
+        this.bbh = bbh;
+    }
 
-	public void setSwt(String swt) {
-		this.swt = swt;
-	}
+    public String getSwt() {
+        return this.swt;
+    }
 
-	public Integer getStatus() {
-		return this.status;
-	}
+    public void setSwt(String swt) {
+        this.swt = swt;
+    }
 
-	public void setStatus(Integer status) {
-		this.status = status;
-	}
+    public Integer getStatus() {
+        return this.status;
+    }
 
-	public Integer getAttr() {
-		return this.attr;
-	}
+    public void setStatus(Integer status) {
+        this.status = status;
+    }
 
-	public void setAttr(Integer attr) {
-		this.attr = attr;
-	}
+    public Integer getAttr() {
+        return this.attr;
+    }
 
-	public Integer getAttrex() {
-		return this.attrex;
-	}
+    public void setAttr(Integer attr) {
+        this.attr = attr;
+    }
 
-	public void setAttrex(Integer attrex) {
-		this.attrex = attrex;
-	}
+    public Integer getAttrex() {
+        return this.attrex;
+    }
 
-	public String getCreator() {
-		return this.creator;
-	}
+    public void setAttrex(Integer attrex) {
+        this.attrex = attrex;
+    }
 
-	public void setCreator(String creator) {
-		this.creator = creator;
-	}
+    public String getCreator() {
+        return this.creator;
+    }
 
-	public Date getCreatetime() {
-		return this.createtime;
-	}
+    public void setCreator(String creator) {
+        this.creator = creator;
+    }
 
-	public void setCreatetime(Date createtime) {
-		this.createtime = createtime;
-	}
+    public Date getCreatetime() {
+        return this.createtime;
+    }
 
-	public String getEditor() {
-		return this.editor;
-	}
+    public void setCreatetime(Date createtime) {
+        this.createtime = createtime;
+    }
 
-	public void setEditor(String editor) {
-		this.editor = editor;
-	}
+    public String getEditor() {
+        return this.editor;
+    }
 
-	public Date getEdittime() {
-		return this.edittime;
-	}
+    public void setEditor(String editor) {
+        this.editor = editor;
+    }
 
-	public void setEdittime(Date edittime) {
-		this.edittime = edittime;
-	}
+    public Date getEdittime() {
+        return this.edittime;
+    }
 
-	public String getDeltor() {
-		return this.deltor;
-	}
+    public void setEdittime(Date edittime) {
+        this.edittime = edittime;
+    }
 
-	public void setDeltor(String deltor) {
-		this.deltor = deltor;
-	}
+    public String getDeltor() {
+        return this.deltor;
+    }
 
-	public Date getDeltime() {
-		return this.deltime;
-	}
+    public void setDeltor(String deltor) {
+        this.deltor = deltor;
+    }
 
-	public void setDeltime(Date deltime) {
-		this.deltime = deltime;
-	}
+    public Date getDeltime() {
+        return this.deltime;
+    }
 
-	public String getBz() {
-		return this.bz;
-	}
+    public void setDeltime(Date deltime) {
+        this.deltime = deltime;
+    }
 
-	public void setBz(String bz) {
-		this.bz = bz;
-	}
+    public String getBz() {
+        return this.bz;
+    }
 
-	public Integer getPxno() {
-		return this.pxno;
-	}
+    public void setBz(String bz) {
+        this.bz = bz;
+    }
 
-	public String getMd5() {
-		return md5;
-	}
+    public Integer getPxno() {
+        return this.pxno;
+    }
 
-	public void setMd5(String md5) {
-		this.md5 = md5;
-	}
+    public String getMd5() {
+        return md5;
+    }
 
-	public void setPxno(Integer pxno) {
-		this.pxno = pxno;
-	}
+    public void setMd5(String md5) {
+        this.md5 = md5;
+    }
 
-	public String getTablename() {
-		return tablename;
-	}
+    public void setPxno(Integer pxno) {
+        this.pxno = pxno;
+    }
 
-	public void setTablename(String tablename) {
-		this.tablename = tablename;
-	}
+    public String getTablename() {
+        return tablename;
+    }
+
+    public void setTablename(String tablename) {
+        this.tablename = tablename;
+    }
 
 
 }

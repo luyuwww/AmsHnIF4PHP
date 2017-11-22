@@ -1,32 +1,32 @@
 package com.ams.util;
 
 public class ExceptionThrows extends Exception {
-	private static final long serialVersionUID = 1L;
-	String errorMessage;
+    private static final long serialVersionUID = 1L;
+    String errorMessage;
 
-	public ExceptionThrows(String errorMessage)
+    public ExceptionThrows(String errorMessage)
 
-	{
+    {
 
-		this.errorMessage = errorMessage;
+        this.errorMessage = errorMessage;
 
-	}
+    }
 
-	public String toString()
+    public String toString()
 
-	{
+    {
 
-		return errorMessage;
+        return errorMessage;
 
-	}
+    }
 
-	public String getMessage()
+    public String getMessage()
 
-	{
+    {
 
-		return errorMessage;
+        return errorMessage;
 
-	}
+    }
 
 }
 

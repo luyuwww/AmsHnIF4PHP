@@ -1,7 +1,5 @@
 package com.ams.pojo;
 
-import java.math.BigDecimal;
-
 public class SQzh {
     private Integer did;
 

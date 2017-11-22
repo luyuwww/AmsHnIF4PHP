@@ -3,9 +3,9 @@ package com.ams.pojo;
 import java.io.Serializable;
 
 public class SUserWithBLOBs extends SUser implements Serializable {
-	private static final long serialVersionUID = 6596879444496462365L;
+    private static final long serialVersionUID = 6596879444496462365L;
 
-	private byte[] ini;
+    private byte[] ini;
 
     private byte[] inixml;
 
@@ -25,9 +25,9 @@ public class SUserWithBLOBs extends SUser implements Serializable {
         this.inixml = inixml;
     }
 
-	public String toString() {
-		return super.getDid()+ " : " +super.getUsercode()+" : "+super.getUsername()+ " : "+ super.getPid();
-	}
-    
-    
+    public String toString() {
+        return super.getDid() + " : " + super.getUsercode() + " : " + super.getUsername() + " : " + super.getPid();
+    }
+
+
 }
