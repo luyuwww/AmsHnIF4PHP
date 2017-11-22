@@ -20,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import ch.qos.logback.classic.Logger;
-import com.ams.dao.i.SGroupMapper;
 import com.ams.pojo.FDTable;
 import com.ams.pojo.SDalx;
 import com.ams.pojo.WWjkgl;
@@ -28,30 +27,6 @@ import com.ams.pojo.jaxb.Table;
 
 @Component("createXmlUtil")
 public class XmlUtil {
-	
-	/**
-	 * 调用生成xml
-	 */
-	public void generatorXml() throws IOException {
-		List<SDalx> dalxList = sGroupMapper.getAllDalxList();
-		for (SDalx dalx : dalxList) {
-			if(dalx.getStatus() == 0){
-				if (dalx.getHasprj() == 1) {
-					generatorXmlByTableName("D_PRJ" + dalx.getCode(),  dalx.getChname() + "-项目");
-				}
-				if (dalx.getHasvol() == 1) {
-					generatorXmlByTableName("D_VOL" + dalx.getCode(),  dalx.getChname() + "-案卷");
-				}
-				generatorXmlByTableName("D_FILE" + dalx.getCode(),  dalx.getChname() + "-文件");
-				generatorXmlByTableName("E_FILE" + dalx.getCode(),  dalx.getChname() + "-电子文件");
-			}
-		}
-		List<WWjkgl> wjkglList = sGroupMapper.getAllWjkglList();
-		for (WWjkgl wjkgl : wjkglList) {
-			generatorXmlByTableName("W_QT" + wjkgl.getDid() ,  wjkgl.getWjkmc() + "-库");
-			generatorXmlByTableName("E_FILEQT" + wjkgl.getDid() ,  wjkgl.getWjkmc() + "-电子文件库");
-		}
-	}
 	
 	public Table getTable(String xmlclasspath) {
 		xmlclasspath = basePath + xmlclasspath;
@@ -69,52 +44,6 @@ public class XmlUtil {
 		}
 		return null;
 	}
-
-	public void generatorXmlByTableName(String tableName, String chName) throws IOException {
-		File folder = new File(basePath);
-		if(!folder.exists()){
-			folder.mkdir();
-		}
-		File targetFile = new File(basePath + tableName + ".xml");
-		if (targetFile.exists()) {
-			return;
-		}else{
-			targetFile.createNewFile();
-		}
-		OutputStreamWriter writer = null;
-		try {
-			JAXBContext context = JAXBContext.newInstance(Table.class);
-			Table table = new Table();
-			table.setName(tableName);
-			table.setFname("F_" + tableName);
-			table.setChname(chName);
-			List<Field> fields = new ArrayList<Field>();
-			
-			List<FDTable> fdtableList = sGroupMapper.getFtableList("F_"+tableName);
-			for (FDTable tt : fdtableList) {
-				if(isIgnore(tt.getFieldname().toUpperCase())){
-					continue;
-				}
-				Field field = new Field();
-				field.setChname(tt.getChname());
-				field.setFieldname(tt.getFieldname());
-				field.setFieldtype(tt.getFieldtype());
-				field.setLength(tt.getLength());
-				field.setNotnull(tt.getNotnull()==1);
-				fields.add(field);
-			}
-			table.setFields(fields);
-			Marshaller marshal = context.createMarshaller();
-			marshal.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-			//marshal输出默认是UTF-8 所以这里需要指定 writer 是UTF-8的输出
-			writer = new OutputStreamWriter(new FileOutputStream(targetFile),"UTF-8");
-			marshal.marshal(table, writer);
-		} catch (Exception e) {
-			log.error(e.getMessage());
-		}finally{
-			writer.close();
-		}
-	}
 	
 	/**
 	 * <p>Title: 传入字段的英文名称 如果是忽略列表返回ture </p>
@@ -129,9 +58,6 @@ public class XmlUtil {
 		}
 		return isIgnore;
 	}
-	
-	@Autowired
-	private SGroupMapper sGroupMapper;
 	
 	/** 忽略不需要的字段 */
 	private String[] ignoreFieldName = {"EFILEID","XLH","BBH","SWT","BBH","STATUS","ATTR","ATTREX"

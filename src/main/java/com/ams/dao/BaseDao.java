@@ -2,6 +2,7 @@ package com.ams.dao;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
@@ -68,5 +69,20 @@ public interface BaseDao{
 	
 	@Select("select * from w_wjkgl ")
 	List<WWjkgl> getAllWjkglList();
+	/**
+	 * 查询字段类型
+	 * @param tableName
+	 * @return
+	 */
+	@Select("select code,type from s_archive_field where tableid='${tableName}'")
+	List<Map<String,String>> getfieldtype(@Param("tableName") String tableName);
+
+	/**
+	 * 查询档案类型id
+	 * @param archindex
+	 * @return
+	 */
+	@Select("select id from s_archive_type where archindex = '${archindex}' and status = 1")
+	String getArcId(@Param("archindex") String archindex);
 	
 }

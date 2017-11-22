@@ -1,17 +1,17 @@
 package com.ams.util;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.List;
-import java.util.UUID;
-
+import ch.qos.logback.classic.Logger;
 import com.ams.pojo.FDTable;
+import com.ams.pojo.SUser;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.LoggerFactory;
 
-import ch.qos.logback.classic.Logger;
-import com.ams.pojo.SUser;
+import java.io.File;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.net.URL;
+import java.util.List;
+import java.util.UUID;
 
 public class CommonUtil {
 	
@@ -21,9 +21,9 @@ public class CommonUtil {
 	 * @param modName 模块中文名称
 	 * @param modOwner 模块所属者 user,  "任务列表", "izerui"
 	 */
-	public static String generatUrl(SUser user , String modName , String modOwner , String amsIP){
+	public static String generatUrl(SUser user , String modName , String modOwner , String lamsIP){
 		StringBuffer sb = new StringBuffer();
-		sb.append("http://").append(amsIP).append("/Lams/autoLogin?card=").append(SeriKeyOper.encrypt(user.getUsercode()));
+		sb.append("http://").append(lamsIP).append("/Lams/autoLogin?card=").append(SeriKeyOper.encrypt(user.getUsercode()));
 		sb.append("&serikey=").append(SeriKeyOper.encrypt(user.getPasswd())).append("&moduleName=");
 		sb.append(SeriKeyOper.encrypt(modName)).append("&moduleOwner=").append(SeriKeyOper.encrypt(modOwner));
 		sb.append("&random=").append(Math.random());
@@ -79,8 +79,26 @@ public class CommonUtil {
 		return UUID.randomUUID().toString().replaceAll("-", "");
 	}
 
-	public static void syncActivitUser(String amsIP){
-		String urlStr = "http://"+amsIP+"/Lams/activiti/syn";
+	/**\
+	 * 生成php系统主键
+	 * @return
+	 */
+	public static String getpfpID(){
+		String mathstr = System.currentTimeMillis()+"";
+		String addstr = "";
+		while(true){
+			addstr = ""+(int)Math.floor(Math.random()*1000000);
+			if(addstr.length()==6){
+				mathstr=mathstr+addstr;
+				break;
+			}
+		}
+		BigInteger id=new BigInteger(mathstr);
+		return id.toString();
+	}
+
+	public static void syncActivitUser(String lamsIP){
+		String urlStr = "http://"+lamsIP+"/Lams/activiti/syn";
 		CommonUtil.doHttpGet(urlStr);
 	}
 	private Logger log =  (Logger) LoggerFactory.getLogger(this.getClass());

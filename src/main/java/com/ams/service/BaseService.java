@@ -1,15 +1,13 @@
 package com.ams.service;
 
 import ch.qos.logback.classic.Logger;
+import com.ams.dao.BaseDao;
 import com.ams.dao.JdbcDao;
-import com.ams.dao.i.SGroupMapper;
-import com.ams.dao.i.SQzhMapper;
 import com.ams.dao.i.SUserMapper;
-import com.ams.dao.i.SUserroleMapper;
-import com.ams.pojo.FDTable;
 import com.ams.util.CommonUtil;
 import com.ams.util.DateUtil;
-import com.ams.util.GlobalFinalAttr;
+import com.ams.util.GlobalFinalAttr.DatabaseType;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
@@ -30,6 +28,23 @@ import java.util.*;
 
 @Service
 public class BaseService {
+	public static  String ARCID ;
+	public static  Map<String,String> ARCfieldtype;
+	public void init(){
+		ARCID = baseDao.getArcId(phpTabNum);
+		if(StringUtils.isBlank(ARCID)){
+			throw new RuntimeException("档案门类配置错误！");
+		}
+		List<Map<String,String>> maps = baseDao.getfieldtype("f" + phpQzh+"_"+phpTabNum+"_document");
+		if(!maps.isEmpty()){
+			ARCfieldtype = new HashMap<String, String>();
+			for (Map<String, String> map : maps) {
+				ARCfieldtype.put(MapUtils.getString(map,"code"),MapUtils.getString(map,"type"));
+			}
+		}else{
+			throw new RuntimeException("表信息配置错误！");
+		}
+	}
 	/**
 	 * 得到数据库信息 databaseType 和 databaseTime
 	 */
@@ -159,10 +174,10 @@ public class BaseService {
 	/**
 	 * 得到数据库类型的 DatabaseType
 	 */
-	protected GlobalFinalAttr.DatabaseType getDatabaseType() {
-		GlobalFinalAttr.DatabaseType databaseType = null;
+	protected DatabaseType getDatabaseType() {
+		DatabaseType databaseType = null;
 		try {
-			databaseType = GlobalFinalAttr.DatabaseType.getDatabaseType(getDBTyeStr());
+			databaseType = DatabaseType.getDatabaseType(getDBTyeStr());
 		} catch (Exception e) {
 			log.error(e.getMessage());
 		}
@@ -366,17 +381,6 @@ public class BaseService {
 	protected void execSql(String sql) {
 		jdbcDao.excute(sql);
 	}
-	/**
-	 * 根据部门名称获取全宗号
-	 * 
-	 * @param qzmc
-	 * @return
-	 */
-	protected String getQzh(String qzmc) {
-		String sql = "select qzh from s_qzh where bz = '" + qzmc + "'";
-		String qzh = jdbcDao.query4String(sql);
-		return qzh;
-	}
 
 	/**
 	 * 根据pid获取全宗号
@@ -405,22 +409,26 @@ public class BaseService {
 		return returnMaxDid;
 
 	}
-	
-	
-	protected Integer insertDfile4Map(Map<String, String> map,
-			Map<String, String> fieldMapping, String tableName) {
+
+	/**
+	 * 数据表天机方法
+	 * @param map xml中的name
+	 * @param fieldMapping
+	 * @param tableName
+	 * @param wjlx
+	 * @param oaid
+	 * @return
+	 */
+	protected String insertDfile4Map(Map<String, String> map,
+			Map<String, String> fieldMapping, String tableName, String wjlx,String oaid) {
 		String archKey = ""; // 档案字段
 		String archVal = ""; // 档案字段对应的值
-		String bmid = amsDefaultBmid;
-		Integer returnDid = -1;
-		FDTable fDtable = null;
-		List<FDTable> fDTableList = null;// 相关档案类型的字段List
+		String returnDid = ""+-1;
 		StringBuffer fields = new StringBuffer();
 		StringBuffer values = new StringBuffer();
+		String did = CommonUtil.getpfpID();
 		if (null != map && null != map.keySet() && map.keySet().size() > 0) {
 			try {
-				Integer maxdid = getMaxDid(tableName);
-				fDTableList = sGroupMapper.getFtableList("F_" + tableName);
 				Set<String> fieldSet = map.keySet();
 				for (String outSysField : fieldSet) {
 					archKey = fieldMapping.get(outSysField);
@@ -430,100 +438,122 @@ public class BaseService {
 						archVal = (StringUtils.isBlank(archVal) ? "" : archVal);
 						archVal = (archVal.contains("'") ? archVal.replace("'",
 								"''") : archVal);// 兼容单引号
-						fDtable = CommonUtil.getFDtable(fDTableList,
-								archKey);
-						fields.append(fDtable.getFieldname()).append(",");
-						switch (fDtable.getFieldtype()) {
-						case 11:
+						String fieldtype = MapUtils.getString(ARCfieldtype,archKey);
+						fields.append(archKey).append(",");
+						fieldtype = fieldtype.toLowerCase();
+						if (fieldtype.equals("datetime")) {
 							if (archVal.equals("")) {
 								values.append("sysdate,");
 							} else {
 								values.append(generateTimeToSQLDate(archVal))
 										.append(",");
 							}
-							break;
-						case 1:
+
+						} else if (fieldtype.equals("date")) {
+							if (archVal.equals("")) {
+								values.append("curdate(),");
+							} else {
+								values.append(generateTimeToSQLDate(archVal))
+										.append(",");
+							}
+
+						} else if (fieldtype.equals("varchar")) {
 							values.append("'").append(archVal).append("',");
-							break;
-						case 3:
+
+						} else if (fieldtype.equals("int")) {
 							if (StringUtils.isBlank(archVal)) {
 								values.append("null ,");
 							} else {
 								values.append(Integer.parseInt(archVal))
 										.append(",");
 							}
-							break;
-						default:
+
+						}else if (fieldtype.equals("numdate")) {
+							if (StringUtils.isBlank(archVal)) {
+								values.append("null ,");
+							} else {
+								if(archVal.contains("-")){
+									values.append(archVal.replaceAll("-","").substring(0,8))
+											.append(",");
+								}
+							}
+
+						} else {
 							values.append("'").append(archVal).append("',");
-							break;
+
 						}
 					}
 				}
-				fields.append("pid,createtime,status, attr,attrex,qzh,bmid,attached,did");
-				values.append("-1,sysdate,0,").append(dfileAttr).append(",")
-						.append(dfileAttrex).append(",'");
-				values.append(amsDefaultQzh).append("','").append(bmid).append("',0,")
-						.append(maxdid);
+				fields.append("id,createtime,fondsid,doctype,rid,"+phpDfileKey);
+				values.append(did+",sysdate(),"+phpQzh+",").append("'"+wjlx+"',").append("'"+oaid+"',")
+				.append(phpDfileValue);
 				String SQL = "insert into " + tableName + " ("
 						+ fields.toString() + ") values ( " + values.toString()
 						+ " )";
 				execSql(SQL);
-				returnDid = maxdid;
+				returnDid = did;
 				System.out.println("插入一条数据成功.fileReciveTxt: " + SQL);
+				log.info("插入一条数据成功.fileReciveTxt: " + SQL);
 			} catch (Exception e) {
 				e.printStackTrace();
 				log.error("插入一条数据失败.fileReciveTxt: " + e.getMessage());
 			}
 		} else {
-			returnDid = -1;
+			returnDid = -1+"";
 		}
 		fields.setLength(0);
 		values.setLength(0);
 		return returnDid;
 	}
-	
-	
-	protected void insertEfile(File efile, String libcode, Integer pid, String efileName , String sysName) {
-		String eFileTableName = "E_FILE" + libcode;
+
+	/**
+	 * 新增附件信息方法
+	 * @param efile
+	 * @param pid
+	 * @param efileName
+	 * @param efilepath
+	 * @param sysName
+	 */
+	protected void insertEfile(File efile,  String pid,String efileName,
+							   String efilepath , String sysName) {
+		String dfileTableName = "f" + phpQzh+"_"+phpTabNum+"_document";
+		String eFileTableName = "e_record";
 		String ext = FilenameUtils.getExtension(efile.getName());
-		String efilepath = eFileTableName + File.separator
-				+ DateUtil.getCurrentDateStr() + File.separator;
-		String realFileName = GlobalFinalAttr.getGuid()
-				+ System.currentTimeMillis() + "." + ext;
-//		String realFileName = System.currentTimeMillis() + "." + ext;
-		File newFile = new File(arcftpCatalogue + File.separator + efilepath + File.separator + realFileName);
-		File newFilePath = new File(arcftpCatalogue + File.separator + efilepath + File.separator);
+		String eid = CommonUtil.getpfpID();
+		String realFileName = eid+"."+ext;
+		String nowDate = DateUtil.getCurrentDateStr();
+		long filesize = efile.length();
+		String newFilepathstr = arcftpCatalogue +"/uploads/company1/fonds"+phpQzh+
+				"/"+ ARCID+"/"+nowDate.substring(0,4) +"/"+nowDate.replaceAll("-","")+"/";
+		File newFilePath = new File(newFilepathstr);
+		File newFile = new File(newFilepathstr+ realFileName);
 		if(!newFilePath.isDirectory()){
 			newFilePath.mkdirs();
 		}
 //		File newFile = new File(efilepath + File.separator + efile.getName());
 		try {
-			FileUtils.copyFile(efile, newFile);
+			FileUtils.copyFile(efile, newFile);//复制电子文件
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 		}
 		StringBuffer fields = new StringBuffer();
 		StringBuffer values = new StringBuffer();
-		Integer maxdid = getMaxDid(eFileTableName);
 		try {
-			fields.append("PID, PATHNAME,TITLE,PZM,EFILENAME,EXT,");
-			values.append(pid).append(",'").append(efilepath).append("','");
-			values.append(efileName)
-					.append("','").append(pzm).append("','");
-			values.append(realFileName).append("','").append(ext).append("',");
-			fields.append("CREATETIME,STATUS,ATTR,ATTREX,CREATOR,DID");
-			values.append("sysdate").append(",0,").append(dfileAttr)
-					.append(",").append(dfileAttrex).append(",'");
-			values.append(sysName).append("',").append(maxdid);
+			fields.append("id, fondsid,archtypeid,tableid,archid,title,extension,savefilename,filepath," +
+					"hangingtime,filesize,"+phpEfileKey);
+			values.append("'"+eid+"',").append(phpQzh).append(","+ARCID).append(",'"+dfileTableName+"',");
+			values.append(pid).append(",'").append(efileName).append("','").append(ext+"','");
+			values.append(realFileName).append("','").append(newFilepathstr.replace(arcftpCatalogue,"")).append("',sysdate(),");
+			values.append(filesize+",");
+			values.append(phpEfileValue);
 			String SQL = "insert into " + eFileTableName + " ("
 					+ fields.toString() + ") values ( " + values.toString()
 					+ " )";
-			String upSql = "update d_file"+libcode+" set attached = 1 where did = "+pid+"";
 			execSql(SQL);
-			execSql(upSql);
-			System.out.println("插入一条数据成功.fileReciveTxt: " + SQL);
+			System.out.println("插入一条电子文件成功.efileReciveTxt: " + SQL);
+			log.info("插入一条电子文件成功.efileReciveTxt: " + SQL);
 		} catch (Exception e) {
-			log.error("插入一条数据失败.fileReciveTxt: " + e.getMessage());
+			log.error("插入一条电子文件失败.efileReciveTxt: " + e.getMessage());
 			fields.setLength(0);
 			values.setLength(0);
 		}
@@ -543,12 +573,10 @@ public class BaseService {
 	/**
 	 * 得到oa Fw映射表
 	 */
-	protected Map<String, String> getFwGwMappingArc(String wjlx) {
-		if (null == oaFwMappingArc) {
-			oaFwMappingArc = quert2Colum4Map("SELECT F1 , F2 FROM "
+	protected Map<String, String> getGwMappingArc(String wjlx) {
+		Map<String,String>	oaGwMappingArc = quert2Colum4Map("SELECT F1 , F2 FROM "
 					+ oaDfileMappingTable + " where F3 = '"+wjlx+"'", "F1", "F2");
-		}
-		return oaFwMappingArc;
+		return oaGwMappingArc;
 	}
 	
 	/**
@@ -572,69 +600,70 @@ public class BaseService {
 		sysdate = "SYSDATE";
 		return sysdate;
 	}
+
+	/**
+	 *获得文件夹名作oa主键
+	 * @param path
+	 * @return
+	 */
+	protected String getOAid(String path){
+		String[] tt = path.split("/");
+		return tt[tt.length-2];
+	}
 	@Autowired
 	protected JdbcDao jdbcDao;
 	@Autowired
-	protected SGroupMapper sGroupMapper;
+	protected BaseDao baseDao;
 	@Autowired
 	protected SUserMapper sUserMapper;
-	@Autowired
-	protected SQzhMapper sQzhMapper;
-	@Autowired
-	protected SUserroleMapper sUserroleMapper;
 	@Autowired
 	@Value("${sqlserverSchemaName}")
 	protected String sqlserverSchemaName;
 	@Autowired
-	@Value("${ams.pzm}")
-	protected String pzm;
-	@Autowired
-	@Value("${ams.dfile.status}")
-	protected String dfileStatus;// 状态
-	@Autowired
-	@Value("${ams.dfile.attr}")
-	protected String dfileAttr;// 归档前后 1未归档 0已归档
-	@Autowired
-	@Value("${ams.dfile.attrex}")
-	protected String dfileAttrex;// 移交
-	@Autowired
-	@Value("${ams.default.qzh}")
-	protected String amsDefaultQzh;
-	@Autowired
-	@Value("${ams.ws.libcode}")
-	protected String wsCode;
-	@Autowired
 	@Value("${oaFile.localPath}")
 	protected String oaXmlLocalPath;//存放oa上传xml本地目录
-	@Autowired
-	@Value("${ams.default.bmid}")
-	protected String amsDefaultBmid;
 	@Autowired
 	@Value("${oa.fwxml.catalogue}")
 	protected String OAfwCatalogue;//oa fw mulu
 	@Autowired
+	@Value("${oa.hjfwxml.catalogue}")
+	protected String OAhjfwCatalogue;//oa hjfw mulu
+	@Autowired
 	@Value("${oa.swxml.catalogue}")
 	protected String OAswCatalogue;//oa sw mulu
 	@Autowired
+	@Value("${oa.hyjyxml.catalogue}")
+	protected String OAhyjyCatalogue;//oa hyjy mulu
+	@Autowired
 	@Value("${oa.qbxml.catalogue}")
 	protected String OAqbCatalogue;//oa qb mulu
-	@Autowired
-	@Value("${oa.fwfile.catalogue}")
-	protected String OAfwFileCatalogue;//oa fwfile mulu
-	@Autowired
-	@Value("${oa.swfile.catalogue}")
-	protected String OAswFileCatalogue;//oa swfile mulu
-	@Autowired
-	@Value("${oa.qbfile.catalogue}")
-	protected String OAqbFileCatalogue;//oa qbfile mulu
 	@Autowired
 	@Value("${oa.dfile.mapping}")
 	protected String oaDfileMappingTable;//oa Dfile mapping
 	@Autowired
 	@Value("${arc.ftp.catalogue}")
 	protected String arcftpCatalogue;//oa Efile mapping
-	
-	
+	@Autowired
+	@Value("${oa.esfw.mapping}")
+	protected String oaESFwMappingTable;//oa Efile mapping
+	@Autowired
+	@Value("${php.qzh}")
+	protected String phpQzh;
+	@Autowired
+	@Value("${php.tabname.Tabnam}")
+	protected String phpTabNum;
+	@Autowired
+	@Value("${php.dfile.key}")
+	protected String phpDfileKey;
+	@Autowired
+	@Value("${php.dfile.value}")
+	protected String phpDfileValue;
+	@Autowired
+	@Value("${php.efile.key}")
+	protected String phpEfileKey;
+	@Autowired
+	@Value("${php.efile.value}")
+	protected String phpEfileValue;
 	
 	private String sysdate = null;
 	private static Map<String, String> oaSwMappingArc = null;
