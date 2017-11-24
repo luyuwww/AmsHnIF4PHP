@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lams接口控制台</title>
+    <title>接口控制台</title>
     <link href="${pageContext.request.contextPath}/res/js/bootstrap-3.0.3-dist/css/bootstrap.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/res/js/bootstrap-3.0.3-dist/css/bootstrap-theme.min.css"
           rel="stylesheet">
@@ -33,9 +33,10 @@
         <br>
         <a class="btn btn-lg btn-danger"
             href="/LamsShZjk//initMapping">初始化接口代码表</a><br>
+            -->
         <a class="btn btn-lg btn-info"
-            href="/LamsShZjk//gepsSync">接收项目档案数据</a>
-         -->
+            href="${pageContext.request.contextPath}/refreshIF">初始化接口</a>
+
         <a class="btn btn-lg btn-primary"
            href="${pageContext.request.contextPath}/viewLogList">查看日志</a>
         <a class="btn btn-lg btn-primary"

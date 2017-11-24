@@ -1,6 +1,7 @@
 package com.ams.service.impl;
 
 import ch.qos.logback.classic.Logger;
+import com.ams.pojo.PTable;
 import com.ams.service.BaseService;
 import com.ams.service.i.OaDataRcvService;
 import com.ams.util.DateUtil;
@@ -25,13 +26,19 @@ import java.util.Map;
 @Service("oaDataRcvService")
 public class OaDataRcvServiceImpl extends BaseService implements
         OaDataRcvService {
+    public void initIf(){
+        super.init();
+    }
 
     /**
-     * INTEGRATION
+     * 进入归档方法
+     * 循环遍历数据文件夹
      */
     public void dataReceive() {
         listFiles = new ArrayList();
-        super.init();
+        if(StringUtils.isBlank(dfileTableName)){//初始化接口信息
+            super.init();
+        }
         // 获取发文目录下所有xml文件
         List<File> fwFiles = catchXnls(OAfwCatalogue);
         boolean flag = false;
@@ -76,14 +83,15 @@ public class OaDataRcvServiceImpl extends BaseService implements
                 flag4 = parseXml(file, "会议纪要");
             }
         }
-        moveFile(movePath);//移动文件到存储的路径下
+//        if(flag1&flag2&flag3&flag4){
+//            moveFile(movePath);//移动文件到存储的路径下
+//        }
     }
 
     /**
-     * PRASE
+     * 根据配置表解析xml信息
      */
-    private synchronized boolean parseXml(File file, String wjlx) {
-        String dfileTableName = "f" + phpQzh + "_" + phpTabNum + "_document";
+    private boolean parseXml(File file, String wjlx) {
         String xmlPath = file.getAbsolutePath();//获得xml的绝对路径
         String absolutionPath = xmlPath.substring(0, xmlPath.lastIndexOf("\\") + 1);
         String oapath = "";
@@ -92,6 +100,7 @@ public class OaDataRcvServiceImpl extends BaseService implements
         String oaid = wjlx + "_" + super.getOAid(oapath);//为了日后可以纠错查找将文件的上级文件夹名做为标识放入系统中
         boolean flag = false;
         String did = "-1";
+        List<String> oaFields = new ArrayList<String>();
         try {
             //处理xml
             Document document = XmlObjUtil.xmlFile2Document(xmlPath);
@@ -99,9 +108,14 @@ public class OaDataRcvServiceImpl extends BaseService implements
             List<Element> elements = root.getChild(oaXmlInfostr).getChildren().get(0).getChildren();
             String oaName = "";
             String oaValue = "";
-            //查询数据表对应的sml name 字段
-            String oaFwFieldsSql = "select F1 from " + oaDfileMappingTable + " where F3 = '" + wjlx + "'";
-            List<String> oaFields = jdbcDao.quert4List(oaFwFieldsSql);
+            //遍历数据表信息获得OA的字段
+//            String oaFwFieldsSql = "select F1 from " + oaDfileMappingTable + " where F3 = '" + wjlx + "'";
+            for (PTable pTable : dPtabList) {
+                if(wjlx.equals(pTable.getF3())){
+                    oaFields.add(pTable.getF1());
+                }
+            }
+//             = jdbcDao.quert4List(oaFwFieldsSql);
             //组装数据表map
             Map<String, String> map = new HashMap();
             for (String oaField : oaFields) {
@@ -119,12 +133,11 @@ public class OaDataRcvServiceImpl extends BaseService implements
             did = insertDfile4Map(map, getGwMappingArc(wjlx), dfileTableName, wjlx, oaid);
             if (!did.equals("-1")) {
                 int efilesize = 0;
-                String oaSFwEFieldsSql = "select F1 from " + oaESFwMappingTable + " where F3 = '" + wjlx + "'";
-                List<String> oaSFwEFields = jdbcDao.quert4List(oaSFwEFieldsSql);
+//                String oaSFwEFieldsSql = "select F1 from " + oaESFwMappingTable + " where F3 = '" +  + "'";
+                List<String> oaSFwEFields = oaEFields.get(wjlx);
                 String oaEName = "";
                 String oaEValue = "";
                 for (String oaSFwEField : oaSFwEFields) {
-                    String efilePath = jdbcDao.query4String("select F2 from " + oaESFwMappingTable + " where F1 = '" + oaSFwEField + "' and F3 = '" + wjlx + "'");
                     for (Element ele : elements) {
                         oaEName = ele.getAttributeValue("Name");
                         if (oaSFwEField.equals(oaEName)) {
@@ -133,7 +146,7 @@ public class OaDataRcvServiceImpl extends BaseService implements
                                 String[] efileNames = oaEValue.split(";");
                                 for (String efileName : efileNames) {
                                     File efile = new File(absolutionPath + efileName);
-                                    insertEfile(efile, did, efileName, absolutionPath + efileName, "");
+                                    insertEfile(efile, did, efileName);
                                     efilesize++;
                                 }
                             }
@@ -151,8 +164,8 @@ public class OaDataRcvServiceImpl extends BaseService implements
             e.printStackTrace();
             log.error(e.getMessage());
             if (!did.equals("-1")) {
-                jdbcDao.excute("delete from " + dfileTableName + " where did = " + did + "");
-                System.out.println("异常情况，DID：" + did + "的文件被删除！");
+                jdbcDao.excute("delete from " + dfileTableName + " where id = " + did + "");
+                System.out.println("异常情况，ID：" + did + "的文件被删除！");
             }
         }
         return flag;
@@ -201,16 +214,6 @@ public class OaDataRcvServiceImpl extends BaseService implements
         }
         return listFiles;
     }
-
-    public static void main(String[] args) {
-    }
-
-    @Autowired
-    @Value("${move.rootPath}")
-    protected String movePath;
-    @Autowired
-    @Value("${oa.xml.infostr}")
-    protected String oaXmlInfostr;
     private List<File> listFiles = new ArrayList();
     private Logger log = (Logger) LoggerFactory.getLogger(this.getClass());
 }

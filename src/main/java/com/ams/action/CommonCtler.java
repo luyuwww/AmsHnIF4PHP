@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
@@ -103,6 +104,17 @@ public class CommonCtler {
         }
     }
 
+    /**
+     * 初始化接口
+     * @param request
+     * @param response
+     * @throws IOException
+     */
+    @RequestMapping(value="/refreshIF")
+    public String refreshIF(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        oaDataRcvService.initIf();
+        return "index.jsp";
+    }
     @RequestMapping(value = "/oadataReceive")
     public String oaDataReceive() {
         oaDataRcvService.dataReceive();
