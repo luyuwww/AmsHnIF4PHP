@@ -1,6 +1,7 @@
 package com.ams.service.impl;
 
 import ch.qos.logback.classic.Logger;
+import com.ams.pojo.PTable;
 import com.ams.service.BaseService;
 import com.ams.service.i.OaDataRcvService;
 import com.ams.util.DateUtil;
@@ -25,120 +26,93 @@ import java.util.Map;
 @Service("oaDataRcvService")
 public class OaDataRcvServiceImpl extends BaseService implements
         OaDataRcvService {
-
-    /**
-     * INTEGRATION
-     */
-    public void dataReceive() {
-        listFiles = new ArrayList();
+    public void initIf(){
         super.init();
-        // 获取发文目录下所有xml文件
-        List<File> fwFiles = catchXnls(OAfwCatalogue);
-        boolean flag = false;
-        if (fwFiles != null && fwFiles.size() > 0) {
-            for (File file : fwFiles) {
-                flag = parseXml(file, "公司发文");
-            }
-        }
-        listFiles = new ArrayList();
-        // 获取函件发文目录下所有xml文件
-        List<File> hjfwFiles = catchXnls(OAhjfwCatalogue);
-        boolean flag1 = false;
-        if (hjfwFiles != null && hjfwFiles.size() > 0) {
-            for (File file : hjfwFiles) {
-                flag1 = parseXml(file, "函件发文");
-            }
-        }
-        listFiles = new ArrayList();
-        // 获取收文目录下所有xml文件
-        List<File> swFiles = catchXnls(OAswCatalogue);
-        boolean flag2 = false;
-        if (swFiles != null && swFiles.size() > 0) {
-            for (File file : swFiles) {
-                flag2 = parseXml(file, "公司收文");
-            }
-        }
-        listFiles = new ArrayList();
-        // 获取签报目录下所有xml文件
-        List<File> qbFiles = catchXnls(OAqbCatalogue);
-        boolean flag3 = false;
-        if (qbFiles != null && qbFiles.size() > 0) {
-            for (File file : qbFiles) {
-                flag3 = parseXml(file, "公司签报");
-            }
-        }
-        listFiles = new ArrayList();
-        // 获取会议纪要目录下所有xml文件
-        List<File> hyjyFiles = catchXnls(OAhyjyCatalogue);
-        boolean flag4 = false;
-        if (hyjyFiles != null && hyjyFiles.size() > 0) {
-            for (File file : hyjyFiles) {
-                flag4 = parseXml(file, "会议纪要");
-            }
-        }
-        moveFile(movePath);//移动文件到存储的路径下
     }
 
     /**
-     * PRASE
+     * 进入归档方法
+     * 循环遍历数据文件夹
      */
-    private synchronized boolean parseXml(File file, String wjlx) {
-        String dfileTableName = "f" + phpQzh + "_" + phpTabNum + "_document";
+    public void dataReceive() {
+        listFiles = new ArrayList();
+        if(StringUtils.isBlank(dfileTableName)){//初始化接口信息
+            super.init();
+        }
+        // 获取目录下所有xml文件
+        List<File> Files = catchXnls(oaFtpPath);
+        boolean flag = false;
+        if (Files != null && Files.size() > 0) {
+            for (File file : Files) {
+                flag = parseXml (file);
+            }
+        }
+        moveFile(oaFtpPath);
+    }
+
+    /**
+     * 根据配置表解析xml信息
+     */
+    private boolean parseXml(File file) {
         String xmlPath = file.getAbsolutePath();//获得xml的绝对路径
-        String absolutionPath = xmlPath.substring(0, xmlPath.lastIndexOf("\\") + 1);
         String oapath = "";
+        String filepath = "";
+        String fileName = "";
+        String formName = "";
         oapath = FilenameUtils.normalize(xmlPath);
         oapath = oapath.replaceAll("\\\\", "/");//统一路径中的“\” 为“/”
-        String oaid = wjlx + "_" + super.getOAid(oapath);//为了日后可以纠错查找将文件的上级文件夹名做为标识放入系统中
+        String oaid = super.getOAid(oapath);//为了日后可以纠错查找将文件的上级文件夹名做为标识放入系统中
         boolean flag = false;
+        List<Element> dElements = null;
+        List<Element> eElements = null;
         String did = "-1";
         try {
             //处理xml
             Document document = XmlObjUtil.xmlFile2Document(xmlPath);
             Element root = document.getRootElement();
-            List<Element> elements = root.getChild(oaXmlInfostr).getChildren().get(0).getChildren();
+            dElements = root.getChild("ams_form").getChild("formdata").getChildren("field");
             String oaName = "";
             String oaValue = "";
-            //查询数据表对应的sml name 字段
-            String oaFwFieldsSql = "select F1 from " + oaDfileMappingTable + " where F3 = '" + wjlx + "'";
-            List<String> oaFields = jdbcDao.quert4List(oaFwFieldsSql);
             //组装数据表map
             Map<String, String> map = new HashMap();
-            for (String oaField : oaFields) {
-                for (Element ele : elements) {
-                    oaName = ele.getAttributeValue("Name");
-                    if (oaField.equals(oaName)) {
-                        oaValue = ele.getAttributeValue("Value");
+            for (String oaField : fieldMap.keySet()) {
+                for (Element ele : dElements) {
+                    oaName = ele.getChild("fieldName").getValue();
+                    if (StringUtils.isNotBlank(oaName) && oaField.equals(oaName)) {
+                        oaValue = ele.getChild("fieldValue").getValue();
                         if (StringUtils.isNotBlank(oaValue)) {
                             map.put(oaField, oaValue);
                         }
                     }
                 }
             }
+            //表单名称存储
+            formName = root.getChild("ams_form").getChild("formname").getValue();
             //添加数据表
-            did = insertDfile4Map(map, getGwMappingArc(wjlx), dfileTableName, wjlx, oaid);
+            did = insertDfile4Map(map, fieldMap, dfileTableName, oaid,formName);
+            //处理电子文件信息
             if (!did.equals("-1")) {
+//            if (!did.equals("")) {
                 int efilesize = 0;
-                String oaSFwEFieldsSql = "select F1 from " + oaESFwMappingTable + " where F3 = '" + wjlx + "'";
-                List<String> oaSFwEFields = jdbcDao.quert4List(oaSFwEFieldsSql);
-                String oaEName = "";
-                String oaEValue = "";
-                for (String oaSFwEField : oaSFwEFields) {
-                    String efilePath = jdbcDao.query4String("select F2 from " + oaESFwMappingTable + " where F1 = '" + oaSFwEField + "' and F3 = '" + wjlx + "'");
-                    for (Element ele : elements) {
-                        oaEName = ele.getAttributeValue("Name");
-                        if (oaSFwEField.equals(oaEName)) {
-                            oaEValue = ele.getAttributeValue("Value");
-                            if (StringUtils.isNotBlank(oaEValue)) {
-                                String[] efileNames = oaEValue.split(";");
-                                for (String efileName : efileNames) {
-                                    File efile = new File(absolutionPath + efileName);
-                                    insertEfile(efile, did, efileName, absolutionPath + efileName, "");
-                                    efilesize++;
-                                }
-                            }
-                        }
-                    }
+                //遍历file_from里所有附件信息
+                eElements = root.getChild("ams_form").getChild("filelist_form").getChildren("file_form");
+                for (Element ele : eElements) {
+                    filepath = ele.getChild("path").getValue();
+                    fileName = ele.getChild("filename_form").getValue();
+                    filepath = filepath.replaceAll("\\\\\\\\", "/");
+                    File efile = new File(oaFtpEfilepath + filepath);
+                    insertEfile(efile, did, fileName);
+                    efilesize++;
+                }
+                eElements = null;
+                eElements = root.getChild("ams_form").getChild("filelist_formattach").getChildren("file_formattach");
+                for (Element ele : eElements) {
+                    filepath = ele.getChild("attachpath").getValue();
+                    fileName = ele.getChild("filename_formattach").getValue();
+                    filepath = filepath.replaceAll("\\\\\\\\", "/");
+                    File efile = new File(oaFtpEfilepath + filepath);
+                    insertEfile(efile, did, fileName);
+                    efilesize++;
                 }
                 //会写电子附件个数
                 String updateefilestr = "update " + dfileTableName + " set filesnum=" + efilesize + " where id = " + did;
@@ -151,8 +125,8 @@ public class OaDataRcvServiceImpl extends BaseService implements
             e.printStackTrace();
             log.error(e.getMessage());
             if (!did.equals("-1")) {
-                jdbcDao.excute("delete from " + dfileTableName + " where did = " + did + "");
-                System.out.println("异常情况，DID：" + did + "的文件被删除！");
+                jdbcDao.excute("delete from " + dfileTableName + " where id = " + did + "");
+                System.out.println("异常情况，ID：" + did + "的文件被删除！");
             }
         }
         return flag;
@@ -162,12 +136,11 @@ public class OaDataRcvServiceImpl extends BaseService implements
      * MOVE
      */
     public void moveFile(String catalogue) {
-        String movePath = oaXmlLocalPath + File.separator
-                + DateUtil.getCurrentDateStr() + File.separator + System.currentTimeMillis();
+        String movePathNew = movePath + DateUtil.getCurrentDateStr() + "/" + System.currentTimeMillis();
         try {
             File[] listFile = new File(catalogue).listFiles();
             for (File file : listFile) {
-                FileUtils.moveDirectoryToDirectory(file, new File(movePath), true);
+                FileUtils.moveDirectoryToDirectory(file, new File(movePathNew), true);
             }
             new File(catalogue).mkdir();
         } catch (IOException e) {
@@ -189,6 +162,9 @@ public class OaDataRcvServiceImpl extends BaseService implements
         if (subFile != null) {
             for (int i = 0; i < subFile.length; i++) {
                 if (subFile[i].isDirectory()) {
+                    if(subFile[i].getName().equalsIgnoreCase("File")){
+                        continue;
+                    }
                     catchXnls(subFile[i].getAbsolutePath());
                 } else {
                     if (subFile[i].getName().endsWith(".xml")) {
@@ -201,16 +177,6 @@ public class OaDataRcvServiceImpl extends BaseService implements
         }
         return listFiles;
     }
-
-    public static void main(String[] args) {
-    }
-
-    @Autowired
-    @Value("${move.rootPath}")
-    protected String movePath;
-    @Autowired
-    @Value("${oa.xml.infostr}")
-    protected String oaXmlInfostr;
     private List<File> listFiles = new ArrayList();
     private Logger log = (Logger) LoggerFactory.getLogger(this.getClass());
 }

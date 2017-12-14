@@ -104,9 +104,15 @@ public class CommonCtler {
     }
 
     @RequestMapping(value = "/oadataReceive")
-    public String oaDataReceive() {
+    public void oaDataReceive(HttpServletRequest request, HttpServletResponse response) throws Exception{
         oaDataRcvService.dataReceive();
-        return "index.jsp";
+        PrintWriter out = response.getWriter();
+        response.setContentType("text/html;charset=utf-8 ");
+        out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">");
+        out.println("<script>");
+        out.println("alert('数据抓取成功！');");
+        out.println("window.location.href= '"+request.getContextPath()+"/index.html';");
+        out.println("</script>");
     }
 
     @Autowired

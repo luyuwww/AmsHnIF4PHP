@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger;
 import com.ams.dao.BaseDao;
 import com.ams.dao.JdbcDao;
 import com.ams.dao.i.SUserMapper;
+import com.ams.pojo.PTable;
 import com.ams.util.CommonUtil;
 import com.ams.util.DateUtil;
 import com.ams.util.GlobalFinalAttr.DatabaseType;
@@ -28,15 +29,25 @@ import java.util.*;
 
 @Service
 public class BaseService {
-    public static String ARCID;
-    public static Map<String, String> ARCfieldtype;
+    public static String ARCID;//档案类型的id
+    public static Map<String, String> ARCfieldtype;//数据表的字段类型
+    public static String dfileTableName ;//数据表名
+    public static List<PTable> dPtabList= null;//数据表的字段值对应表配置表信息
+    public static Map<String,String> fieldMap = new HashMap<String, String>();
 
+    /**
+     * 初始化方法
+     */
     public void init() {
+        dfileTableName = "f" + phpQzh + "_" + phpTabNum + "_document";
+        List<PTable> tabList = baseDao.getEtabList(oaDfileMappingTable);
+        List<Map<String, String>> maps = baseDao.getfieldtype(dfileTableName);
+        List<String> efieldTemp = null;
+        dPtabList = baseDao.getDtabList(oaDfileMappingTable);
         ARCID = baseDao.getArcId(phpTabNum);
         if (StringUtils.isBlank(ARCID)) {
             throw new RuntimeException("档案门类配置错误！");
         }
-        List<Map<String, String>> maps = baseDao.getfieldtype("f" + phpQzh + "_" + phpTabNum + "_document");
         if (!maps.isEmpty()) {
             ARCfieldtype = new HashMap<String, String>();
             for (Map<String, String> map : maps) {
@@ -44,6 +55,9 @@ public class BaseService {
             }
         } else {
             throw new RuntimeException("表信息配置错误！");
+        }
+        for (PTable pTable : tabList) {
+            fieldMap.put(pTable.getF1(),pTable.getF2());
         }
     }
 
@@ -185,52 +199,6 @@ public class BaseService {
         return databaseType;
     }
 
-    /**
-     * 根据表名判断数据表是否存在
-     */
-    protected Boolean existTable(String tablename) {
-        boolean result = false;
-        Connection conn = null;
-        DatabaseMetaData dbmd = null;
-        ResultSet rs = null;
-        try {
-            conn = jdbcDao.getConn();
-            dbmd = conn.getMetaData();
-            String schemaName = getSchemaName(dbmd);
-            rs = dbmd.getTables(null, schemaName, tablename,
-                    new String[]{"TABLE"});
-            if (rs.next()) {
-                result = true;
-            }
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        } finally {
-            try {
-                dbmd = null;
-                rs.close();
-                conn.close();
-            } catch (SQLException e) {
-                log.error("获取ConnectionMetaData关闭链接错误!");
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 判断表的字段是否存在
-     */
-    protected boolean existColumn(String tablename, String columnName) {
-        return existColumnOrIndex(tablename, columnName, true);
-    }
-
-    /**
-     * 判断字段的索引是否存在
-     */
-    protected boolean existIndex(String tablename, String indexName) {
-
-        return existColumnOrIndex(tablename, indexName, false);
-    }
-
     protected Map<String, Object> queryForMap(String sql) {
         return jdbcDao.queryForMap(sql);
     }
@@ -250,177 +218,20 @@ public class BaseService {
                                                   String col2) {
         return jdbcDao.quert2Colum4Map(sql, col1, col2);
     }
-
-    /**
-     * 判断表的字段或者索引是否存在
-     *
-     * @param tablename         表名
-     * @param columnOrIndexName 字段名, 或者索引名
-     * @param isColumn          true字段 false索引
-     * @return boolean true存在 false 不存在
-     */
-    protected boolean existColumnOrIndex(String tablename,
-                                         String columnOrIndexName, boolean isColumn) {
-        boolean result = false;
-        Connection conn = null;
-        DatabaseMetaData dbmd = null;
-        ResultSet rs = null;
-        try {
-            conn = jdbcDao.getConn();
-            dbmd = conn.getMetaData();
-            String schemaName = getSchemaName(dbmd);
-            if (isColumn) {
-                rs = dbmd.getColumns(null, schemaName, tablename,
-                        columnOrIndexName);
-                if (rs.next()) {
-                    result = true;
-                }
-            } else {
-                rs = dbmd.getIndexInfo(null, schemaName, tablename, false,
-                        false);
-                while (rs.next()) {
-                    String indexName = rs.getString(6);
-                    if (indexName != null
-                            && indexName.equals(columnOrIndexName)) {
-                        result = true;
-                        break;
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        } finally {
-            try {
-                dbmd = null;
-                rs.close();
-                conn.close();
-            } catch (SQLException e) {
-                log.error("获取ConnectionMetaData关闭链接错误!");
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 根据表字段是否可以为空
-     */
-    protected boolean validateColumnIsNULL(String tablename, String columnName) {
-        boolean result = false;
-        Connection conn = null;
-        DatabaseMetaData dbmd = null;
-        ResultSet rs = null;
-        try {
-            conn = jdbcDao.getConn();
-            dbmd = conn.getMetaData();
-            String schemaName = getSchemaName(dbmd);
-            rs = dbmd.getColumns(null, schemaName, tablename, columnName);
-            if (rs.next()) {
-                String notnull = rs.getString(11);
-                result = notnull != null && notnull.equals("1");
-            }
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        } finally {
-            try {
-                dbmd = null;
-                rs.close();
-                conn.close();
-            } catch (SQLException e) {
-                log.error("获取ConnectionMetaData关闭链接错误!");
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 执行sql文件
-     */
-    protected boolean runScript(Reader reader) {
-        boolean result = false;
-        Connection conn = null;
-        try {
-            conn = jdbcDao.getConn();
-            ScriptRunner runner = new ScriptRunner(conn);
-            runner.setErrorLogWriter(null);
-            runner.setLogWriter(null);
-            runner.runScript(reader);
-            result = true;
-        } catch (Exception ex) {
-            log.error(ex.getMessage() + "执行sql文件错误", ex);
-        } finally {
-            try {
-                conn.close();
-            } catch (SQLException e) {
-                log.error(e.getMessage() + "获取ConnectionMetaData关闭链接错误!", e);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * 获取表模式 private
-     */
-    private String getSchemaName(DatabaseMetaData dbmd) throws SQLException {
-        String schemaName;
-        switch (getDatabaseType().getValue()) {
-            case 1:// mssql
-                schemaName = sqlserverSchemaName;
-                break;
-            case 4:// h2
-                schemaName = null;
-                break;
-            default:
-                schemaName = dbmd.getUserName();
-                break;
-        }
-        return schemaName;
-    }
-
     protected void execSql(String sql) {
         jdbcDao.excute(sql);
     }
-
     /**
-     * 根据pid获取全宗号
-     *
-     * @param pid
-     * @return
-     */
-    protected String getQzhByPid(Integer pid) {
-        String sql = "select qzh from s_qzh where did = " + pid;
-        String qzh = jdbcDao.query4String(sql);
-        return qzh;
-    }
-
-    protected String getQzhByKey(String key) {
-        String sql = "select qzh from s_qzh where primarykey = " + key;
-        String qzh = jdbcDao.query4String(sql);
-        return qzh;
-    }
-
-    protected Integer getMaxDid(String tableName) {
-        Integer returnMaxDid = sUserMapper.getMaxDid(tableName);
-        if (returnMaxDid == null) {
-            returnMaxDid = 1;
-        } else {
-            returnMaxDid = returnMaxDid + 1;
-        }
-        return returnMaxDid;
-
-    }
-
-    /**
-     * 数据表天机方法
+     * 数据表添加方法
      *
      * @param map          xml中的name
      * @param fieldMapping
      * @param tableName
-     * @param wjlx
      * @param oaid
      * @return
      */
     protected String insertDfile4Map(Map<String, String> map,
-                                     Map<String, String> fieldMapping, String tableName, String wjlx, String oaid) {
+                                     Map<String, String> fieldMapping, String tableName, String oaid,String formName) {
         String archKey = ""; // 档案字段
         String archVal = ""; // 档案字段对应的值
         String returnDid = "" + -1;
@@ -484,9 +295,9 @@ public class BaseService {
                         }
                     }
                 }
-                fields.append("id,createtime,fondsid,doctype,rid," + phpDfileKey);
-                values.append(did + ",sysdate()," + phpQzh + ",").append("'" + wjlx + "',").append("'" + oaid + "',")
-                        .append(phpDfileValue);
+                fields.append("id,createtime,fondsid,rid," + phpDfileKey+","+oaFormSaveField);
+                values.append(did + ",sysdate()," + phpQzh + ",").append("'" + oaid + "',")
+                        .append(phpDfileValue).append(",'"+formName+"'");
                 String SQL = "insert into " + tableName + " ("
                         + fields.toString() + ") values ( " + values.toString()
                         + " )";
@@ -512,14 +323,11 @@ public class BaseService {
      * @param efile
      * @param pid
      * @param efileName
-     * @param efilepath
-     * @param sysName
      */
-    protected void insertEfile(File efile, String pid, String efileName,
-                               String efilepath, String sysName) {
-        String dfileTableName = "f" + phpQzh + "_" + phpTabNum + "_document";
+    protected void insertEfile(File efile, String pid, String efileName) {
         String eFileTableName = "e_record";
         String ext = FilenameUtils.getExtension(efile.getName());
+        efileName = efileName+ "." + ext;
         String eid = CommonUtil.getpfpID();
         String realFileName = eid + "." + ext;
         String nowDate = DateUtil.getCurrentDateStr();
@@ -561,35 +369,17 @@ public class BaseService {
     }
 
     /**
-     * 得到oa Xt映射表
+     * 根据数据字典表获得oa和档案系统字段值的对应关系
      */
-//	protected Map<String, String> getOaXtMappingArc() {
-//		if (null == oaXtMappingArc) {
-//			oaXtMappingArc = quert2Colum4Map("SELECT F1 , F2 FROM "
-//					+ oaXtMappingTable, "F1", "F2");
-//		}
-//		return oaXtMappingArc;
-//	}
-
-    /**
-     * 得到oa Fw映射表
-     */
-    protected Map<String, String> getGwMappingArc(String wjlx) {
-        Map<String, String> oaGwMappingArc = quert2Colum4Map("SELECT F1 , F2 FROM "
-                + oaDfileMappingTable + " where F3 = '" + wjlx + "'", "F1", "F2");
-        return oaGwMappingArc;
-    }
-
-    /**
-     * 得到oa Sw映射表
-     */
-    protected Map<String, String> getSwGwMappingArc(String wjlx) {
-        if (null == oaSwMappingArc) {
-            oaSwMappingArc = quert2Colum4Map("SELECT F1 , F2 FROM "
-                    + oaDfileMappingTable + " where F3 = '" + wjlx + "'", "F1", "F2");
-        }
-        return oaSwMappingArc;
-    }
+//    protected Map<String, String> getGwMappingArc(String wjlx) {
+//        Map<String, String> oaGwMappingArc = new HashMap<String, String>();
+//        for (PTable pTable : dPtabList) {
+//            if(wjlx.equals(pTable.getF3())){
+//                oaGwMappingArc.put(pTable.getF1(),pTable.getF2());
+//            }
+//        }
+//        return oaGwMappingArc;
+//    }
 
     /**
      * 获取数据库参数 数据库类型名称,时间
@@ -609,8 +399,12 @@ public class BaseService {
      * @return
      */
     protected String getOAid(String path) {
-        String[] tt = path.split("/");
-        return tt[tt.length - 2];
+        String[] parts = path.split("/");
+        String fileName = parts[parts.length - 1];
+        if(fileName.contains("_")){
+            fileName = fileName.split("_")[0];
+        }
+        return fileName;
     }
 
     @Autowired
@@ -623,32 +417,11 @@ public class BaseService {
     @Value("${sqlserverSchemaName}")
     protected String sqlserverSchemaName;
     @Autowired
-    @Value("${oaFile.localPath}")
-    protected String oaXmlLocalPath;//存放oa上传xml本地目录
-    @Autowired
-    @Value("${oa.fwxml.catalogue}")
-    protected String OAfwCatalogue;//oa fw mulu
-    @Autowired
-    @Value("${oa.hjfwxml.catalogue}")
-    protected String OAhjfwCatalogue;//oa hjfw mulu
-    @Autowired
-    @Value("${oa.swxml.catalogue}")
-    protected String OAswCatalogue;//oa sw mulu
-    @Autowired
-    @Value("${oa.hyjyxml.catalogue}")
-    protected String OAhyjyCatalogue;//oa hyjy mulu
-    @Autowired
-    @Value("${oa.qbxml.catalogue}")
-    protected String OAqbCatalogue;//oa qb mulu
-    @Autowired
     @Value("${oa.dfile.mapping}")
     protected String oaDfileMappingTable;//oa Dfile mapping
     @Autowired
     @Value("${arc.ftp.catalogue}")
     protected String arcftpCatalogue;//oa Efile mapping
-    @Autowired
-    @Value("${oa.esfw.mapping}")
-    protected String oaESFwMappingTable;//oa Efile mapping
     @Autowired
     @Value("${php.qzh}")
     protected String phpQzh;
@@ -667,9 +440,22 @@ public class BaseService {
     @Autowired
     @Value("${php.efile.value}")
     protected String phpEfileValue;
+    @Autowired
+    @Value("${move.rootPath}")
+    protected String movePath;
+    @Autowired
+    @Value("${oa.xml.infostr}")
+    protected String oaXmlInfostr;
+    @Autowired
+    @Value("${oa.ftp.path}")
+    protected String oaFtpPath;
+    @Autowired
+    @Value("${oa.form.saveField}")
+    protected String oaFormSaveField;
+    @Autowired
+    @Value("${oa.ftp.efilepath}")
+    protected String oaFtpEfilepath;
 
     private String sysdate = null;
-    private static Map<String, String> oaSwMappingArc = null;
-    private static Map<String, String> oaFwMappingArc = null;
     private Logger log = (Logger) LoggerFactory.getLogger(this.getClass());
 }

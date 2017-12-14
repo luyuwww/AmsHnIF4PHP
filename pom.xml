@@ -10,7 +10,7 @@
     <name>AmsHnIF4PHP Maven Webapp</name>
     <url>http://maven.apache.org</url>
     <build>
-        <finalName>AmsIFHnZj</finalName>
+        <finalName>AmsHnIF4PHP</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
