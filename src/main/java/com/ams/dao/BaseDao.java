@@ -1,9 +1,6 @@
 package com.ams.dao;
 
-import com.ams.pojo.FDTable;
-import com.ams.pojo.PTable;
-import com.ams.pojo.SDalx;
-import com.ams.pojo.WWjkgl;
+import com.ams.pojo.*;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -87,22 +84,22 @@ public interface BaseDao {
      * @param archindex
      * @return
      */
-    @Select("select id from s_archive_type where archindex = '${archindex}' and status = 1")
-    String getArcId(@Param("archindex") String archindex);
+    @Select("select id from s_archive_type where archindex = '${archindex}' and fondsid = '${fondsid}' and status = 1")
+    String getArcId(@Param("archindex") String archindex,@Param("fondsid") String fondsid);
 
     /**
      * 查询字段对应表的信息
      * @return
      */
 //    @Select("select F1,F2,F3 from ${tableName}")
-    @Select("select F1,F2 from ${tableName}")
-    List<PTable> getDtabList(@Param("tableName") String tableName);
+    @Select("select * from ${tableName}")
+    List<FieldMappingTab> getFieldMappingList(@Param("tableName") String tableName);
     /**
      * 查询附件对应信息
      * @return
      */
-    @Select("select F1,F2 from ${tableName}")
-    List<PTable> getEtabList(@Param("tableName") String tableName);
+    @Select("select * from ${tableName}")
+    List<TabNameMapping> getTabNameMappingList(@Param("tableName") String tableName);
 
 
 }

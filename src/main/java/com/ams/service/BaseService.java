@@ -4,7 +4,9 @@ import ch.qos.logback.classic.Logger;
 import com.ams.dao.BaseDao;
 import com.ams.dao.JdbcDao;
 import com.ams.dao.i.SUserMapper;
+import com.ams.pojo.FieldMappingTab;
 import com.ams.pojo.PTable;
+import com.ams.pojo.TabNameMapping;
 import com.ams.util.CommonUtil;
 import com.ams.util.DateUtil;
 import com.ams.util.GlobalFinalAttr.DatabaseType;
@@ -29,36 +31,60 @@ import java.util.*;
 
 @Service
 public class BaseService {
-    public static String ARCID;//档案类型的id
-    public static Map<String, String> ARCfieldtype;//数据表的字段类型
-    public static String dfileTableName ;//数据表名
-    public static List<PTable> dPtabList= null;//数据表的字段值对应表配置表信息
-    public static Map<String,String> fieldMap = new HashMap<String, String>();
+    public static Map<String,String> ARCIDMap = new HashMap<String, String>();//档案类型的id
+    public static Map<String,Map<String, String>> ARCfieldtypes = new HashMap<String, Map<String, String>>();//数据表的字段类型
+    public static Map<String,Map<String,String>> fieldMaps =
+            new HashMap<String, Map<String, String>>();//字段对应信息
+    public static List<FieldMappingTab> FieldMappingList;//字段对应表
+    public static List<TabNameMapping> TabMappingList;//表信息
+    public static Map<String ,String> tabNameMap = new HashMap<String, String>();//表名称map
+    public static String[] wsTypeKeys= null;//区分文书类型的字段
+    public static String[] wsTypeCValuses= null;//对应的文书字段
+    public static String[] wsTypeEValuses= null;//对应的文书字段
 
     /**
      * 初始化方法
      */
     public void init() {
-        dfileTableName = "f" + phpQzh + "_" + phpTabNum + "_document";
-        List<PTable> tabList = baseDao.getEtabList(oaDfileMappingTable);
-        List<Map<String, String>> maps = baseDao.getfieldtype(dfileTableName);
-        List<String> efieldTemp = null;
-        dPtabList = baseDao.getDtabList(oaDfileMappingTable);
-        ARCID = baseDao.getArcId(phpTabNum);
-        if (StringUtils.isBlank(ARCID)) {
-            throw new RuntimeException("档案门类配置错误！");
-        }
-        if (!maps.isEmpty()) {
+        String tabName = "";
+        String ARCID = "";
+        Map<String,String> ARCfieldtype = null;
+        Map<String,String> fieldMap = null;
+        List<Map<String, String>> maps = null;
+        FieldMappingList = baseDao.getFieldMappingList(oaDfileMappingTable);
+        TabMappingList = baseDao.getTabNameMappingList(daTabnameMapping);
+        for (TabNameMapping tabNameMapping : TabMappingList) {
+            tabName = "f"+tabNameMapping.getQzh()+"_"+tabNameMapping.getTabnum()+"_document";
+            tabNameMap.put(tabNameMapping.getCompany()+"_"+tabNameMapping.getType(),tabName);
             ARCfieldtype = new HashMap<String, String>();
-            for (Map<String, String> map : maps) {
-                ARCfieldtype.put(MapUtils.getString(map, "code"), MapUtils.getString(map, "type"));
+            maps = baseDao.getfieldtype(tabName);
+            ARCID = baseDao.getArcId(tabNameMapping.getTabnum(),tabNameMapping.getQzh());
+            if(StringUtils.isBlank(ARCID)){
+                throw new RuntimeException("表信息配置错误！");
             }
-        } else {
-            throw new RuntimeException("表信息配置错误！");
+            ARCIDMap.put(tabNameMapping.getTabnum(),ARCID);
+            if (!maps.isEmpty()) {
+                ARCfieldtype = new HashMap<String, String>();
+                for (Map<String, String> map : maps) {
+                    ARCfieldtype.put(MapUtils.getString(map, "code"), MapUtils.getString(map, "type"));
+                }
+            } else {
+                throw new RuntimeException("表信息配置错误！");
+            }
+            ARCfieldtypes.put(tabName,ARCfieldtype);
+            //添加字段对应信息
+            fieldMap = new HashMap<String, String>();
+            for (FieldMappingTab fieldMappingTab : FieldMappingList) {
+                if(tabNameMapping.getCompany().equalsIgnoreCase(fieldMappingTab.getCompany())&&
+                        tabNameMapping.getType().equalsIgnoreCase(fieldMappingTab.getType()) ){
+                    fieldMap.put(fieldMappingTab.getOafield(),fieldMappingTab.getDafield());
+                }
+            }
+            fieldMaps.put(tabNameMapping.getCompany()+"_"+tabNameMapping.getType(),fieldMap);
         }
-        for (PTable pTable : tabList) {
-            fieldMap.put(pTable.getF1(),pTable.getF2());
-        }
+        wsTypeKeys = arcWsTypekey.split(",");
+        wsTypeCValuses = arcWsTypeCValue.split(",");
+        wsTypeEValuses = arcWsTypeEValue.split(",");
     }
 
     /**
@@ -231,13 +257,15 @@ public class BaseService {
      * @return
      */
     protected String insertDfile4Map(Map<String, String> map,
-                                     Map<String, String> fieldMapping, String tableName, String oaid,String formName) {
+                                     Map<String, String> fieldMapping, String tableName, String oaid,String company,String type) {
         String archKey = ""; // 档案字段
         String archVal = ""; // 档案字段对应的值
         String returnDid = "" + -1;
         StringBuffer fields = new StringBuffer();
         StringBuffer values = new StringBuffer();
         String did = CommonUtil.getpfpID();
+        Map<String,String> ARCfieldtype = ARCfieldtypes.get(tableName);
+        String oaWStype = "";
         if (null != map && null != map.keySet() && map.keySet().size() > 0) {
             try {
                 Set<String> fieldSet = map.keySet();
@@ -250,6 +278,9 @@ public class BaseService {
                         archVal = (archVal.contains("'") ? archVal.replace("'",
                                 "''") : archVal);// 兼容单引号
                         String fieldtype = MapUtils.getString(ARCfieldtype, archKey);
+                        if(StringUtils.isBlank(fieldtype)){
+                            log.error("字段名为 "+archKey+ " 配置错误！");
+                        }
                         fields.append(archKey).append(",");
                         fieldtype = fieldtype.toLowerCase();
                         if (fieldtype.equals("datetime")) {
@@ -293,11 +324,23 @@ public class BaseService {
                             values.append("'").append(archVal).append("',");
 
                         }
+                        if("ZB".equalsIgnoreCase(company)&&"WS".equalsIgnoreCase(type)&&arcWsTypeField.equalsIgnoreCase(archKey)){
+                            //arcWsTypeSaveField
+                            for (int i = 0; i < wsTypeKeys.length; i++) {
+                                if(archVal.contains(wsTypeKeys[i])){
+                                    fields.append("classfy").append(",");
+                                    fields.append("classfyname").append(",");
+                                    values.append("'"+wsTypeEValuses[i]+"',");
+                                    values.append("'"+wsTypeCValuses[i]+"',");
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
-                fields.append("id,createtime,fondsid,rid," + phpDfileKey+","+oaFormSaveField);
-                values.append(did + ",sysdate()," + phpQzh + ",").append("'" + oaid + "',")
-                        .append(phpDfileValue).append(",'"+formName+"'");
+                fields.append("id,createtime,fondsid,rid," + phpDfileKey);
+                values.append(did + ",sysdate()," + this.getQZH(tableName) + ",").append("'" + oaid + "',")
+                        .append(phpDfileValue);
                 String SQL = "insert into " + tableName + " ("
                         + fields.toString() + ") values ( " + values.toString()
                         + " )";
@@ -324,15 +367,16 @@ public class BaseService {
      * @param pid
      * @param efileName
      */
-    protected void insertEfile(File efile, String pid, String efileName) {
+    protected void insertEfile(File efile, String pid, String efileName,String dfileTableName) {
         String eFileTableName = "e_record";
         String ext = FilenameUtils.getExtension(efile.getName());
         efileName = efileName+ "." + ext;
         String eid = CommonUtil.getpfpID();
         String realFileName = eid + "." + ext;
         String nowDate = DateUtil.getCurrentDateStr();
+        String ARCID = ARCIDMap.get(this.getTabNum(dfileTableName));
         long filesize = efile.length();
-        String newFilepathstr = arcftpCatalogue + "/uploads/company1/fonds" + phpQzh +
+        String newFilepathstr = arcftpCatalogue + "/uploads/company1/fonds" + this.getQZH(dfileTableName) +
                 "/" + ARCID + "/" + nowDate.substring(0, 4) + "/" + nowDate.replaceAll("-", "") + "/";
         File newFilePath = new File(newFilepathstr);
         File newFile = new File(newFilepathstr + realFileName);
@@ -350,7 +394,7 @@ public class BaseService {
         try {
             fields.append("id, fondsid,archtypeid,tableid,archid,title,extension,savefilename,filepath," +
                     "hangingtime,filesize," + phpEfileKey);
-            values.append("'" + eid + "',").append(phpQzh).append("," + ARCID).append(",'" + dfileTableName + "',");
+            values.append("'" + eid + "',").append(this.getQZH(dfileTableName)).append("," + ARCID).append(",'" + dfileTableName + "',");
             values.append(pid).append(",'").append(efileName).append("','").append(ext + "','");
             values.append(realFileName).append("','").append(newFilepathstr.replace(arcftpCatalogue, "")).append("',sysdate(),");
             values.append(filesize + ",");
@@ -407,6 +451,24 @@ public class BaseService {
         return fileName;
     }
 
+    /**
+     * 获取全宗号
+     * @param tabname
+     * @return
+     */
+    protected String getQZH(String tabname){
+        return tabname.split("_")[0].replace("f","");
+    }
+
+    /**
+     * 获取表序号
+     * @param tabname
+     * @return
+     */
+    protected String getTabNum(String tabname){
+        return tabname.split("_")[1];
+    }
+
     @Autowired
     protected JdbcDao jdbcDao;
     @Autowired
@@ -423,12 +485,6 @@ public class BaseService {
     @Value("${arc.ftp.catalogue}")
     protected String arcftpCatalogue;//oa Efile mapping
     @Autowired
-    @Value("${php.qzh}")
-    protected String phpQzh;
-    @Autowired
-    @Value("${php.tabname.Tabnam}")
-    protected String phpTabNum;
-    @Autowired
     @Value("${php.dfile.key}")
     protected String phpDfileKey;
     @Autowired
@@ -444,17 +500,41 @@ public class BaseService {
     @Value("${move.rootPath}")
     protected String movePath;
     @Autowired
-    @Value("${oa.xml.infostr}")
-    protected String oaXmlInfostr;
-    @Autowired
     @Value("${oa.ftp.path}")
     protected String oaFtpPath;
     @Autowired
-    @Value("${oa.form.saveField}")
-    protected String oaFormSaveField;
-    @Autowired
     @Value("${oa.ftp.efilepath}")
     protected String oaFtpEfilepath;
+    @Autowired
+    @Value("${da.tabname.mapping}")
+    protected String daTabnameMapping;
+
+    @Autowired
+    @Value("${oa.zb.path}")
+    protected String oaZBpath;
+    @Autowired
+    @Value("${oa.nm.path}")
+    protected String oaNMpath;
+    @Autowired
+    @Value("${oa.sy.path}")
+    protected String oaSYpath;
+    @Autowired
+    @Value("${oa.yc.path}")
+    protected String oaYCpath;
+    @Autowired
+    @Value("${arc.ws.typeField}")
+    protected String arcWsTypeField;
+
+    @Autowired
+    @Value("${arc.ws.typekey}")
+    protected String arcWsTypekey;
+
+    @Autowired
+    @Value("${arc.ws.typeCValue}")
+    protected String arcWsTypeCValue;
+    @Autowired
+    @Value("${arc.ws.typeEValue}")
+    protected String arcWsTypeEValue;
 
     private String sysdate = null;
     private Logger log = (Logger) LoggerFactory.getLogger(this.getClass());
