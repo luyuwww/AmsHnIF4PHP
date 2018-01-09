@@ -338,6 +338,10 @@ public class BaseService {
                         }
                     }
                 }
+                if("WS".equalsIgnoreCase(type)){
+                    fields.append("volid,");
+                    values.append("0,");
+                }
                 fields.append("id,createtime,fondsid,rid," + phpDfileKey);
                 values.append(did + ",sysdate()," + this.getQZH(tableName) + ",").append("'" + oaid + "',")
                         .append(phpDfileValue);
